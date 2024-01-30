@@ -1,8 +1,5 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 
-
-User = get_user_model()
 
 MAX_CHARS_LENGTH = 256
 MAX_SLUG_LENGTH = 50
@@ -56,12 +53,6 @@ class Title(models.Model):
         verbose_name='Описание',
         blank=True,
     )
-    # genre = models.ForeignKey(
-    #     'Genre',
-    #     models.SET_NULL,
-    #     blank=False,
-    #     null=True,
-    # )
     genre = models.ManyToManyField(
         'Genre',
         verbose_name='Жанры',
