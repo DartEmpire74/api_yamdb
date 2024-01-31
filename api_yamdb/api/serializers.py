@@ -1,3 +1,5 @@
+import datetime as dt
+
 from rest_framework import serializers
 
 from reviews.models import Category, Genre, Title
@@ -7,14 +9,14 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        exclude = ()
+        exclude = ('id', )
 
 
 class GenreSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Genre
-        exclude = ()
+        exclude = ('id', )
 
 
 class TitleSerializer(serializers.ModelSerializer):
@@ -28,3 +30,13 @@ class TitleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Title
         exclude = ()
+
+    def validate_year(self, value):
+        today_year = dt.date.today().year
+
+        if value > today_year:
+            raise serializers.ValidationError(
+                'Год произведения не может быть больше текущего'
+            )
+
+        return value

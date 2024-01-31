@@ -62,6 +62,7 @@ class Title(models.Model):
     category = models.ForeignKey(
         'Category',
         models.SET_NULL,
+        verbose_name='Категории',
         related_name='posts',
         blank=False,
         null=True,
