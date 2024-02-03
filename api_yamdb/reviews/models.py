@@ -1,4 +1,9 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
 
 
 MAX_CHARS_LENGTH = 256
@@ -74,3 +79,38 @@ class Title(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Review(models.Model):
+    text = models.TextField(verbose_name='Текст')
+    author = models.ForeignKey(
+        User, verbose_name='Автор', on_delete=models.CASCADE, related_name='reviews')
+    pub_date = models.DateTimeField(
+        'Дата добавления', auto_now_add=True, db_index=True)
+    score = models.IntegerField(
+        'Оценка', validators=[MinValueValidator(1), MaxValueValidator(10)]
+    )
+    title = models.ForeignKey(
+       Title, on_delete=models.CASCADE, related_name='reviews')
+
+    class Meta:
+        verbose_name = 'отзыв'
+        verbose_name_plural = 'Отзывы'
+
+    def __str__(self):
+        return self.text
+
+
+class Comment(models.Model):
+    author = models.ForeignKey(
+        User, verbose_name='Автор', on_delete=models.CASCADE, related_name='comments')
+    text = models.TextField(verbose_name='Текст')
+    pub_date = models.DateTimeField(
+        'Дата добавления', auto_now_add=True, db_index=True)
+    review = models.ForeignKey(
+        Review, on_delete=models.CASCADE, related_name='comments')
+
+    class Meta:
+
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
