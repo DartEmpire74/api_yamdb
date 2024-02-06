@@ -74,6 +74,7 @@ class Title(models.Model):
     )
 
     class Meta:
+        ordering = ('-year', )
         verbose_name = 'произведение'
         verbose_name_plural = 'Произведения'
 
@@ -84,14 +85,21 @@ class Title(models.Model):
 class Review(models.Model):
     text = models.TextField(verbose_name='Текст')
     author = models.ForeignKey(
-        User, verbose_name='Автор', on_delete=models.CASCADE, related_name='reviews')
+        User,
+        verbose_name='Автор',
+        on_delete=models.CASCADE,
+        related_name='reviews'
+    )
     pub_date = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
     score = models.IntegerField(
         'Оценка', validators=[MinValueValidator(1), MaxValueValidator(10)]
     )
     title = models.ForeignKey(
-       Title, on_delete=models.CASCADE, related_name='reviews')
+        Title,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+    )
 
     class Meta:
         verbose_name = 'отзыв'
@@ -103,7 +111,11 @@ class Review(models.Model):
 
 class Comment(models.Model):
     author = models.ForeignKey(
-        User, verbose_name='Автор', on_delete=models.CASCADE, related_name='comments')
+        User,
+        verbose_name='Автор',
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
