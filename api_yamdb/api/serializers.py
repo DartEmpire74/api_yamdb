@@ -6,8 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Avg
 from rest_framework import serializers
 from rest_framework.validators import ValidationError
-from rest_framework.relations import (
-    SlugRelatedField)
+from rest_framework.relations import SlugRelatedField
 
 from reviews.models import (
     Comment, Review, Category, Genre, Title)
@@ -91,7 +90,8 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
 
-    author = SlugRelatedField(slug_field='username', read_only=True)
+    author = SlugRelatedField(
+        slug_field='username', read_only=True)
 
     class Meta:
         fields = ('id', 'text', 'author', 'pub_date', 'score')
@@ -135,4 +135,5 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 class ProfileEditSerializer(CustomUserSerializer):
     """Serializer для редактирования данных пользователя."""
+
     role = serializers.CharField(read_only=True)
