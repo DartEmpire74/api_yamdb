@@ -1,45 +1,59 @@
-from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
+from django.db import models
+
+from .constants import (
+    MAX_CHARS_LENGTH, MAX_VALUE_VALIDATOR, MIN_VALUE_VALIDATOR,
+    MAX_TEXT_LENGTH)
+from .validators import validate_year
 
 
 User = get_user_model()
 
 
-MAX_CHARS_LENGTH = 256
-MAX_SLUG_LENGTH = 50
+class TextDateMixin(models.Model):
+    text = models.TextField(verbose_name='Текст')
+    pub_date = models.DateTimeField(
+        'Дата добавления', auto_now_add=True, db_index=True)
+
+    class Meta:
+        abstract = True
+        ordering = ('-pub_date',)
+
+    def __str__(self):
+        if len(self.text) > MAX_TEXT_LENGTH:
+            return self.text[:MAX_TEXT_LENGTH] + '...'
+        else:
+            return self.text
 
 
-class BaseModelsMixin(models.Model):
+class NameSlugMixin(models.Model):
     name = models.CharField(
         verbose_name='Название',
-        max_length=MAX_CHARS_LENGTH,
-        blank=False,
+        max_length=MAX_CHARS_LENGTH
     )
     slug = models.SlugField(
         verbose_name='Слаг',
-        max_length=MAX_SLUG_LENGTH,
         unique=True,
-        blank=False,
     )
 
     class Meta:
         abstract = True
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
 
 
-class Category(BaseModelsMixin):
+class Category(NameSlugMixin):
 
-    class Meta:
+    class Meta(NameSlugMixin.Meta):
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(BaseModelsMixin):
+class Genre(NameSlugMixin):
 
-    class Meta:
+    class Meta(NameSlugMixin.Meta):
         verbose_name = 'жанр'
         verbose_name_plural = 'Жанры'
 
@@ -48,11 +62,10 @@ class Title(models.Model):
     name = models.CharField(
         verbose_name='Название',
         max_length=MAX_CHARS_LENGTH,
-        blank=False,
     )
-    year = models.IntegerField(
+    year = models.SmallIntegerField(
         verbose_name='Год выпуска',
-        blank=False,
+        validators=[validate_year],
     )
     description = models.TextField(
         verbose_name='Описание',
@@ -61,16 +74,14 @@ class Title(models.Model):
     genre = models.ManyToManyField(
         'Genre',
         verbose_name='Жанры',
-        related_name='titles',
-        blank=False,
+        related_name='titles'
     )
     category = models.ForeignKey(
         'Category',
         models.SET_NULL,
         verbose_name='Категории',
-        related_name='posts',
-        blank=False,
         null=True,
+        related_name='titles'
     )
 
     class Meta:
@@ -82,52 +93,36 @@ class Title(models.Model):
         return self.name
 
 
-class Review(models.Model):
-    text = models.TextField(verbose_name='Текст')
+class Review(TextDateMixin):
     author = models.ForeignKey(
         User,
         verbose_name='Автор',
-        on_delete=models.CASCADE,
-        related_name='reviews'
-    )
-    pub_date = models.DateTimeField(
-        'Дата добавления', auto_now_add=True, db_index=True)
-    score = models.IntegerField(
-        'Оценка', validators=[MinValueValidator(1), MaxValueValidator(10)]
-    )
+        on_delete=models.CASCADE, related_name='reviews')
+    score = models.PositiveSmallIntegerField(
+        'Оценка', validators=[MIN_VALUE_VALIDATOR, MAX_VALUE_VALIDATOR])
     title = models.ForeignKey(
         Title,
-        on_delete=models.CASCADE,
-        related_name='reviews',
-    )
+        verbose_name='Произведение',
+        on_delete=models.CASCADE, related_name='reviews')
 
-    class Meta:
+    class Meta(TextDateMixin.Meta):
         verbose_name = 'отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = [
             models.UniqueConstraint(
                 fields=['author', 'title'],
-                name='unique_author_title_review')
-        ]
-
-    def __str__(self):
-        return self.text
+                name='unique_author_title_review')]
 
 
-class Comment(models.Model):
+class Comment(TextDateMixin):
     author = models.ForeignKey(
         User,
         verbose_name='Автор',
-        on_delete=models.CASCADE,
-        related_name='comments'
-    )
-    text = models.TextField(verbose_name='Текст')
-    pub_date = models.DateTimeField(
-        'Дата добавления', auto_now_add=True, db_index=True)
+        on_delete=models.CASCADE, related_name='comments')
     review = models.ForeignKey(
-        Review, on_delete=models.CASCADE, related_name='comments')
+        Review, verbose_name='Отзыв',
+        on_delete=models.CASCADE, related_name='comments')
 
-    class Meta:
-
+    class Meta(TextDateMixin.Meta):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
