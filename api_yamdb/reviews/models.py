@@ -1,16 +1,20 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from .constants import (
-    MAX_CHARS_LENGTH, MAX_VALUE_VALIDATOR, MIN_VALUE_VALIDATOR,
-    MAX_TEXT_LENGTH)
-from .validators import validate_year
+from reviews.constants import (
+    MAX_CHARS_LENGTH, MAX_TEXT_LENGTH, MAX_VALUE_VALIDATOR,
+    MIN_VALUE_VALIDATOR)
+from reviews.validators import validate_year
 
 
 User = get_user_model()
 
 
-class TextDateMixin(models.Model):
+class AuthorTextDateMixin(models.Model):
+    author = models.ForeignKey(
+        User,
+        verbose_name='Автор',
+        on_delete=models.CASCADE)
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
@@ -22,8 +26,7 @@ class TextDateMixin(models.Model):
     def __str__(self):
         if len(self.text) > MAX_TEXT_LENGTH:
             return self.text[:MAX_TEXT_LENGTH] + '...'
-        else:
-            return self.text
+        return self.text
 
 
 class NameSlugMixin(models.Model):
@@ -93,19 +96,16 @@ class Title(models.Model):
         return self.name
 
 
-class Review(TextDateMixin):
-    author = models.ForeignKey(
-        User,
-        verbose_name='Автор',
-        on_delete=models.CASCADE, related_name='reviews')
+class Review(AuthorTextDateMixin):
     score = models.PositiveSmallIntegerField(
         'Оценка', validators=[MIN_VALUE_VALIDATOR, MAX_VALUE_VALIDATOR])
     title = models.ForeignKey(
         Title,
         verbose_name='Произведение',
-        on_delete=models.CASCADE, related_name='reviews')
+        on_delete=models.CASCADE)
 
-    class Meta(TextDateMixin.Meta):
+    class Meta(AuthorTextDateMixin.Meta):
+        default_related_name = 'reviews'
         verbose_name = 'отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = [
@@ -114,15 +114,12 @@ class Review(TextDateMixin):
                 name='unique_author_title_review')]
 
 
-class Comment(TextDateMixin):
-    author = models.ForeignKey(
-        User,
-        verbose_name='Автор',
-        on_delete=models.CASCADE, related_name='comments')
+class Comment(AuthorTextDateMixin):
     review = models.ForeignKey(
         Review, verbose_name='Отзыв',
-        on_delete=models.CASCADE, related_name='comments')
+        on_delete=models.CASCADE)
 
-    class Meta(TextDateMixin.Meta):
+    class Meta(AuthorTextDateMixin.Meta):
+        default_related_name = 'comments'
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'

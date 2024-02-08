@@ -1,17 +1,14 @@
-import datetime as dt
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
-
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import ValidationError
 
+from api.constants import EMAIL_MAX_LENGTH, USER_MAX_LENGTH
+from api.utils import get_title_model
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.validators import validate_username
-from .constants import EMAIL_MAX_LENGTH, USER_MAX_LENGTH
-from .utils import get_title_model
 
 
 User = get_user_model()
@@ -32,6 +29,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
 
 class TitleSerializer(serializers.ModelSerializer):
+
     category = serializers.SlugRelatedField(
         slug_field='slug', queryset=Category.objects.all()
     )
@@ -41,8 +39,9 @@ class TitleSerializer(serializers.ModelSerializer):
         many=True,
         required=True,
         allow_empty=False,
+        allow_null=False
     )
-    rating = serializers.FloatField(source='avg_rating', read_only=True)
+    rating = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Title
@@ -50,21 +49,10 @@ class TitleSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
-
         rep['genre'] = GenreSerializer(instance.genre.all(), many=True).data
         rep['category'] = CategorySerializer(instance.category).data
 
         return rep
-
-    def validate_year(self, value):
-        today_year = dt.date.today().year
-
-        if value > today_year:
-            raise serializers.ValidationError(
-                'Год произведения не может быть больше текущего'
-            )
-
-        return value
 
 
 class CommentSerializer(serializers.ModelSerializer):

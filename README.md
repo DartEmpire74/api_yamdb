@@ -210,10 +210,10 @@ http://127.0.0.1:8000/redoc/
 Для импорта необходимо использовать команду:
 
 ```
-python manage.py import_from_csv "static/data/category.csv"
-"static/data/genre.csv" "static/data/titles.csv" 
-"static/data/genre_title.csv" "static/data/users.csv"
+python manage.py import_csv “file_path_to_csv” “model”
 ```
+Models: `user`, `title`, `review`, `comments`, `category`, `genre`, `genre_title`
+
 
 
 ## Авторы проекта:
