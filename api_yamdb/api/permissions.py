@@ -1,17 +1,6 @@
 from rest_framework import permissions
 
 
-class IsAuthorOrStaffOrReadOnly(permissions.BasePermission):
-    """Доступ автора или стаффу."""
-
-    def has_object_permission(self, request, view, obj):
-        return (
-            (request.method in permissions.SAFE_METHODS)
-            or (obj.author and obj.author == request.user)
-            or request.user.is_staff
-        )
-
-
 class IsAdmin(permissions.BasePermission):
     """Доступ администратора."""
 
@@ -28,20 +17,13 @@ class IsAdminOrReadOnly(permissions.BasePermission):
                     and request.user.is_admin))
 
 
-class IsAuthorModeratorAdminOrReadOnly(permissions.BasePermission):
+class IsAuthorModeratorAdmin(permissions.BasePermission):
     """Доступ автору, модератору, администратору."""
 
-    def has_permission(self, request, view):
-        return (request.method in permissions.SAFE_METHODS
-                or request.user.is_authenticated)
-
     def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
 
-        if not request.user.is_authenticated:
-            return False
-
-        return (request.user.is_admin
-                or request.user.is_moderator
-                or (obj.author == request.user))
+        return request.method in permissions.SAFE_METHODS or (
+            request.user.is_admin
+            or request.user.is_moderator
+            or (obj.author == request.user)
+        )

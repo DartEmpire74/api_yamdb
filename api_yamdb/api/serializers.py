@@ -3,29 +3,18 @@ import datetime as dt
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
-from django.db.models import Avg
+
 from rest_framework import serializers
-from rest_framework.validators import ValidationError
 from rest_framework.relations import SlugRelatedField
+from rest_framework.validators import ValidationError
 
-from reviews.models import (
-    Comment, Review, Category, Genre, Title)
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.validators import validate_username
+from .constants import EMAIL_MAX_LENGTH, USER_MAX_LENGTH
+from .utils import get_title_model
 
-
-USER_MAX_LENGTH = 150
-EMAIL_MAX_LENGTH = 254
 
 User = get_user_model()
-
-
-class CustomRelationField(serializers.RelatedField):
-
-    def to_representation(self, value):
-        return {
-            'name': value.name,
-            'slug': value.slug,
-        }
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -47,13 +36,17 @@ class TitleSerializer(serializers.ModelSerializer):
         slug_field='slug', queryset=Category.objects.all()
     )
     genre = serializers.SlugRelatedField(
-        slug_field='slug', queryset=Genre.objects.all(), many=True
+        slug_field='slug',
+        queryset=Genre.objects.all(),
+        many=True,
+        required=True,
+        allow_empty=False,
     )
-    rating = serializers.SerializerMethodField()
+    rating = serializers.FloatField(source='avg_rating', read_only=True)
 
     class Meta:
         model = Title
-        exclude = ()
+        fields = '__all__'
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -73,11 +66,6 @@ class TitleSerializer(serializers.ModelSerializer):
 
         return value
 
-    def get_rating(self, obj):
-        reviews = Review.objects.filter(title=obj)
-        average_rating = reviews.aggregate(Avg('score'))['score__avg']
-        return average_rating if average_rating is not None else None
-
 
 class CommentSerializer(serializers.ModelSerializer):
 
@@ -96,6 +84,24 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'text', 'author', 'pub_date', 'score')
         model = Review
+
+    def validate(self, data):
+        if self.context['request'].method == 'POST':
+            title = get_title_model(
+                self.context['view'].kwargs.get('title_id')
+            )
+            author = self.context['request'].user
+            existing_review = Review.objects.filter(
+                author=author,
+                title=title
+            ).exists()
+
+            if existing_review:
+                raise serializers.ValidationError(
+                    "Вы уже оставили отзыв на это произведение."
+                )
+
+        return data
 
 
 class SignUpSerializer(serializers.Serializer):
@@ -124,16 +130,10 @@ class TokenSerializer(serializers.Serializer):
         return data
 
 
-class CustomUserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     """Serializer для модели пользователя."""
 
     class Meta:
         fields = ('username', 'email', 'first_name',
                   'last_name', 'bio', 'role', )
         model = User
-
-
-class ProfileEditSerializer(CustomUserSerializer):
-    """Serializer для редактирования данных пользователя."""
-
-    role = serializers.CharField(read_only=True)
