@@ -5,36 +5,24 @@ from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-
 from django_filters.rest_framework import DjangoFilterBackend
-
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import (
-    AllowAny,
-    IsAuthenticated,
-    IsAuthenticatedOrReadOnly,
-)
+    AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import Category, Genre, Title
-from .filters import TitleFilter
-from .mixins import ListCreateDestroyViewSet, PatchOnlyMixin
-from .permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorModeratorAdmin
-from .serializers import (
-    CategorySerializer,
-    CommentSerializer,
-    GenreSerializer,
-    ReviewSerializer,
-    SignUpSerializer,
-    TitleSerializer,
-    TokenSerializer,
-    UserSerializer,
-)
-from .utils import get_title_model, get_review_model
+from api.filters import TitleFilter
+from api.mixins import ListCreateDestroyViewSet, PatchOnlyMixin
+from api.permissions import IsAdmin, IsAdminOrReadOnly, IsAuthorModeratorAdmin
+from api.serializers import (
+    CategorySerializer, CommentSerializer, GenreSerializer,
+    ReviewSerializer, SignUpSerializer, TitleSerializer,
+    TokenSerializer, UserSerializer)
+from reviews.models import Category, Genre, Review, Title
 
 
 User = get_user_model()
@@ -52,8 +40,7 @@ class GenreViewSet(ListCreateDestroyViewSet):
 
 class TitleViewSet(PatchOnlyMixin, viewsets.ModelViewSet):
     queryset = Title.objects.annotate(
-        avg_rating=Avg('reviews__score')
-    ).all()
+        rating=Avg('reviews__score')).all()
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
@@ -67,34 +54,36 @@ class ReviewViewSet(PatchOnlyMixin, viewsets.ModelViewSet):
         IsAuthorModeratorAdmin
     )
 
-    def perform_create(self, serializer):
-        title = get_title_model(self.kwargs.get('title_id'))
-        author = self.request.user
+    def get_title_model(self):
+        title_id = self.kwargs.get('title_id')
+        return get_object_or_404(Title, id=title_id)
 
-        serializer.save(author=author, title=title)
+    def perform_create(self, serializer):
+        title = self.get_title_model()
+        serializer.save(author=self.request.user, title=title)
 
     def get_queryset(self):
-        title = get_title_model(self.kwargs.get('title_id'))
-
+        title = self.get_title_model()
         return title.reviews.all()
 
 
 class CommentViewSet(PatchOnlyMixin, viewsets.ModelViewSet):
-
     serializer_class = CommentSerializer
     permission_classes = (
         IsAuthenticatedOrReadOnly,
         IsAuthorModeratorAdmin
     )
 
-    def perform_create(self, serializer):
-        review = get_review_model(self.kwargs['review_id'])
+    def get_review_model(self):
+        review_id = self.kwargs.get('review_id')
+        return get_object_or_404(Review, id=review_id)
 
+    def perform_create(self, serializer):
+        review = self.get_review_model()
         serializer.save(author=self.request.user, review=review)
 
     def get_queryset(self):
-        review = get_review_model(self.kwargs['review_id'])
-
+        review = self.get_review_model()
         return review.comments.all()
 
 
