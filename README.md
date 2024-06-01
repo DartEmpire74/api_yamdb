@@ -1,5 +1,3 @@
-# api_yamdb
-api_yamdb
 # YAMDB API
 
 ## О проекте
